@@ -1,11 +1,8 @@
 package com.intelorca.slickgl;
 
-import java.util.ArrayList;
-
-import javax.microedition.khronos.opengles.GL10;
-
-import android.graphics.Color;
-import android.graphics.Rect;
+import android.graphics.*;
+import java.util.*;
+import javax.microedition.khronos.opengles.*;
 
 public class GameGraphics2D {
 	private static final int DEFAULT_NEAR_DISTANCE = -1024;
@@ -169,13 +166,13 @@ public class GameGraphics2D {
 		public int colour = Color.WHITE;
 		public BLENDING_MODE blendingMode = BLENDING_MODE.ALPHA;
 		public Rect src;
-		public int centreX, centreY, z;
-		public int width, height;
+		public float centreX, centreY, z;
+		public float width, height;
 		public float angle;
 		
 		public DrawOperation() { }
 		
-		public DrawOperation(int bitmapID, Rect src, int cx, int cy) {
+		public DrawOperation(int bitmapID, Rect src, float cx, float cy) {
 			this.bitmapID = bitmapID;
 			this.src = src;
 			this.centreX = cx;
@@ -184,13 +181,13 @@ public class GameGraphics2D {
 			this.height = src.height();
 		}
 		
-		public DrawOperation(int bitmapID, Rect src, Rect dst) {
+		public DrawOperation(int bitmapID, Rect src, RectF dst) {
 			this.bitmapID = bitmapID;
 			this.src = src;
 			setDestRect(dst);
 		}
 		
-		public void setDestRect(Rect rect) {
+		public void setDestRect(RectF rect) {
 			width = rect.width();
 			height = rect.height();
 			centreX = rect.left + (width / 2);

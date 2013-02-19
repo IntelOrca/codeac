@@ -45,7 +45,7 @@ public class CodeACGame extends Game {
 		mCanvasWidth = g.renderer.getWidth();
 		mCanvasHeight = g.renderer.getHeight();
 		
-		g.clear(Color.BLUE);
+		g.clear(Color.RED);
 		g.gl2d.setupView();
 		g.gl2d.beginSpriteBatch();
 		
@@ -57,17 +57,15 @@ public class CodeACGame extends Game {
 	private void drawGrid(GameGraphics g) {
 		int[] shape_colours = new int[] { Color.BLUE, Color.RED, Color.YELLOW, Color.GREEN, Color.WHITE, Color.MAGENTA };
 		
-		int size = Math.min(mCanvasWidth, mCanvasHeight) / 9;
-		if (size % 2 == 1)
-			size--;
+		float size = (Math.min(mCanvasWidth, mCanvasHeight) - 8.0f) / 9.0f;
 		
 		DrawOperation drawop = new DrawOperation();
 		drawop.width = size;
 		drawop.height = size;
 		drawop.src = new Rect(0, 0, (int)(128 * mDensity), (int)(128 * mDensity));
 		
-		int startX = (mCanvasWidth - (drawop.width * 9)) / 2;
-		int startY = (mCanvasHeight - (drawop.height * 9)) / 2;
+		float startX = (mCanvasWidth - (drawop.width * 9.0f)) / 2.0f;
+		float startY = (mCanvasHeight - (drawop.height * 9.0f)) / 2.0f;
 		
 		for (int y = 0; y < 9; y++) {
 			for (int x = 0; x < 9; x++) {
