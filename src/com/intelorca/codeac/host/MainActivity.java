@@ -1,5 +1,6 @@
-package com.intelorca.codeac;
+package com.intelorca.codeac.host;
 
+import com.intelorca.codeac.core.CodeACGame;
 import com.intelorca.slickgl.GameView;
 
 import android.app.Activity;

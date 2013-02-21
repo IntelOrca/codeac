@@ -172,6 +172,10 @@ public class GameGraphics2D {
 		
 		public DrawOperation() { }
 		
+		public DrawOperation(RectF dst) {
+			setDestRect(dst);
+		}
+		
 		public DrawOperation(int bitmapID, Rect src, float cx, float cy) {
 			this.bitmapID = bitmapID;
 			this.src = src;
@@ -186,7 +190,7 @@ public class GameGraphics2D {
 			this.src = src;
 			setDestRect(dst);
 		}
-		
+				
 		public void setDestRect(RectF rect) {
 			width = rect.width();
 			height = rect.height();
