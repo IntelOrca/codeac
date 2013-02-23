@@ -1,16 +1,14 @@
 package com.intelorca.codeac.core;
 
 import android.graphics.Color;
-import android.graphics.RectF;
+import android.view.MotionEvent;
 
 import com.intelorca.codeac.core.Symbol.State;
 import com.intelorca.slickgl.GameGraphics;
 import com.intelorca.slickgl.GameGraphics2D.DrawOperation;
 
 class SymbolRepository {
-	private static final int Z = 64;
-	
-	private RectF mBounds;
+	private Location mLocation;
 	private float mSymbolWidth, mSymbolHeight;
 	private int mMaxSymbols;
 	private Symbol[] mSymbols;
@@ -23,13 +21,12 @@ class SymbolRepository {
 	private Symbol getNewSymbol(int c) {
 		Symbol symbol = new Symbol();
 		symbol.setRandom(2, 1);
-		symbol.setState(State.NULL);
+		symbol.setState(State.NORMAL);
 		
 		// Set symbol bounds
-		RectF bounds = new RectF(mBounds.left, mBounds.top - (((c * 2) + 1) * mSymbolHeight), 0, 0);
-		bounds.right = bounds.left + mSymbolWidth;
-		bounds.bottom = bounds.top + mSymbolHeight;
-		symbol.setBounds(bounds);
+		symbol.setLocation(new Location(
+				mLocation.cx, 0.0f - ((c + 1) * 2 * mSymbolHeight), 8,
+				mSymbolWidth, mSymbolHeight));
 		
 		return symbol;
 	}
@@ -41,10 +38,15 @@ class SymbolRepository {
 		do {
 			sorted = true;
 			for (int i = 0; i < mMaxSymbols - 1; i++) {
-				if (mSymbols[i] == null)
+				if (mSymbols[i] == null || mSymbols[i + 1] == null)
 					continue;
 				
-				if (mSymbols[i].getState() != State.NULL) {
+				// Calculate the x, y and component distance away
+				float dx = getCellX(i) - mSymbols[i].getLocation().cx;
+				float dy = getCellY(i) - mSymbols[i].getLocation().cy;
+				float dc = (float)Math.sqrt((dx * dx) + (dy * dy));
+				
+				if ((mSymbols[i].getState() == State.GRABBED && dc > mSymbolWidth * 2) && mSymbols[i + 1].getState() == State.NORMAL) {
 					temp = mSymbols[i];
 					mSymbols[i] = mSymbols[i + 1];
 					mSymbols[i + 1] = temp;
@@ -58,26 +60,56 @@ class SymbolRepository {
 			if (mSymbols[i] == null)
 				continue;
 			
-			if (mSymbols[i].getState() == State.NULL) {
-				moveSymbolToTarget(mSymbols[i], mBounds.centerX(),
-						mBounds.bottom - (i * mSymbolHeight) - (mSymbolHeight / 2.0f));
-			}
+			if (mSymbols[i].getState() == State.NORMAL || mSymbols[i].getState() == State.RESTORING_LOCATION)
+				moveSymbolToTarget(mSymbols[i], getCellX(i), getCellY(i));
 		}
 	}
 	
+	private float getCellX(int i) {
+		return mLocation.cx;
+	}
+	
+	private float getCellY(int i) {
+		return mLocation.getBounds().bottom - (i * mSymbolHeight) - (mSymbolHeight / 2.0f);
+	}
+	
 	private void moveSymbolToTarget(Symbol symbol, float x, float y) {
-		final float maxDelta = 8.0f;
+		// Get symbol location
+		Location symbolLocation = symbol.getLocation();
 		
-		RectF symbolBounds = symbol.getBounds();
-		float dx = x - symbolBounds.centerX();
-		float dy = y - symbolBounds.centerY();
-		dx = Math.signum(dx) * Math.min(Math.abs(dx), maxDelta);
-		dy = Math.signum(dy) * Math.min(Math.abs(dy), maxDelta);
-		symbol.translate(dx, dy);
+		// Calculate the x, y and component distance away
+		float dx = x - symbolLocation.cx;
+		float dy = y - symbolLocation.cy;
+		float dc = (float)Math.sqrt((dx * dx) + (dy * dy));
+		
+		// First check if the symbol is already at its location or close enough
+		if (dc < 4.0f) {
+			// Set location to destination location
+			symbolLocation.cx = x;
+			symbolLocation.cy = y;
+			symbolLocation.z = mLocation.z - 1;
+			symbol.setState(State.NORMAL);
+		} else {
+			// Reset time from restore point to 0 if restore hasn't started yet
+			if (symbol.getState() == State.NORMAL) {
+				symbol.setState(State.RESTORING_LOCATION);
+				symbol.setRestoreLocationTime(0);
+			}
+			
+			// Calculate the distance that should be travelled in this tick
+			int timeRemaining = (60 / 2) - symbol.getRestoreLocationTime();
+			float speed = dc / timeRemaining; 
+			
+			// Translate by that distance in a direct direction
+			double angle = Math.atan2(dy, dx);
+			dx = (float)(Math.cos(angle) * speed);
+			dy = (float)(Math.sin(angle) * speed);
+			symbol.translate(dx, dy);
+		}
 	}
 	
 	public void update() {
-		if (mBounds == null)
+		if (mLocation == null)
 			return;
 		
 		updateSymbolPhysics();
@@ -87,7 +119,7 @@ class SymbolRepository {
 		for (int i = 0; i < mMaxSymbols; i++) {
 			if (mSymbols[i] == null) {
 				mSymbols[i] = getNewSymbol(newSymbolCount);
-				newSymbolCount++;	
+				newSymbolCount++;
 			}
 		}
 		
@@ -98,9 +130,9 @@ class SymbolRepository {
 	}
 	
 	public void draw(GameGraphics g) {
-		DrawOperation drawOp = new DrawOperation(mBounds);
+		DrawOperation drawOp = new DrawOperation(mLocation.getBounds());
 		drawOp.colour = Color.GRAY;
-		drawOp.z = Z;
+		drawOp.z = mLocation.z;
 		g.gl2d.addToBatch(drawOp);
 		
 		// Draw the symbols
@@ -109,10 +141,14 @@ class SymbolRepository {
 				symbol.draw(g);
 	}
 	
-	public void setBounds(RectF value) {
-		mBounds = value;
-		mSymbolWidth = mBounds.width();
-		mSymbolHeight = mBounds.height() / mMaxSymbols;
+	public Location getLocation() {
+		return mLocation;
+	}
+	
+	public void setLocation(Location value) {
+		mLocation = value;
+		mSymbolWidth = mLocation.width;
+		mSymbolHeight = mLocation.height / mMaxSymbols;
 		
 		// Update symbol sizes
 		for (Symbol symbol : mSymbols)
@@ -122,5 +158,21 @@ class SymbolRepository {
 	
 	public int getMaxSymbols() {
 		return mMaxSymbols;
+	}
+	
+	public void onTouchEvent(MotionEvent event) {
+		float x, y;
+		
+		x = event.getX();
+		y = event.getY();
+		
+		for (Symbol symbol : mSymbols) {
+			if (symbol == null)
+				continue;
+			if (symbol.getState() == State.NORMAL && symbol.getLocation().getBounds().contains(x, y)) {
+				CodeACGame.Instance.grabSymbol(symbol, x, y);
+				break;
+			}
+		}
 	}
 }

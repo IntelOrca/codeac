@@ -133,7 +133,7 @@ public class GameGraphics2D {
 			gl.glDisable(GL10.GL_LIGHTING);
 			gl.glEnable(GL10.GL_DEPTH_TEST);
 			gl.glEnable(GL10.GL_BLEND);
-			
+
 			if (mBlendingMode == BLENDING_MODE.ALPHA)
 				gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA);
 			else if (mBlendingMode == BLENDING_MODE.ADDITIVE)

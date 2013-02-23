@@ -4,7 +4,6 @@ import java.util.Random;
 
 import android.graphics.Color;
 import android.graphics.Rect;
-import android.graphics.RectF;
 
 import com.intelorca.codeac.R;
 import com.intelorca.slickgl.GameGraphics;
@@ -12,8 +11,9 @@ import com.intelorca.slickgl.GameGraphics2D.DrawOperation;
 
 class Symbol {
 	public enum State {
-		NULL,
-		PLACABLE,
+		NORMAL,
+		GRABBED,
+		RESTORING_LOCATION,
 		PLACED,
 		DESTROYING,
 	}
@@ -34,12 +34,13 @@ class Symbol {
 	};
 	
 	private static final Random mRandom = new Random();
-	private RectF mBounds;
-	private int mZ = 8;
+	private Location mLocation;
 	private int mColour;
 	private int mShape;
 	
 	private State mState;
+	private float mGrabDX, mGrabDY;
+	private int mRestoreLocationTime;
 	
 	public Symbol() {
 	}
@@ -60,23 +61,32 @@ class Symbol {
 	}
 	
 	public void translate(float x, float y) {
-		mBounds.offset(x, y);
+		mLocation.offset(x, y);
 	}
 	
 	public void setSize(float width, float height) {
-		if (mBounds.width() == width && mBounds.height() == height)
-			return;
-		
-		float cx = mBounds.centerX();
-		float cy = mBounds.centerX();
-		mBounds.left = cx - (width / 2.0f);
-		mBounds.top = cy - (height / 2.0f);
-		mBounds.right = mBounds.left + width;
-		mBounds.bottom = mBounds.bottom + height;
+		mLocation.width = width;
+		mLocation.height = height;
+	}
+	
+	public void grab(float x, float y) {
+		mLocation.z = 4;
+		mGrabDX = x - mLocation.cx;
+		mGrabDY = y - mLocation.cy;
+		mState = State.GRABBED;
+	}
+	
+	public void grabMove(float x, float y) {
+		mLocation.cx = x + mGrabDX;
+		mLocation.cy = y + mGrabDY;
+	}
+	
+	public void release() {
+		mState = State.NORMAL;
 	}
 	
 	public void update() {
-		
+		mRestoreLocationTime++;
 	}
 	
 	public void draw(GameGraphics g) {
@@ -88,24 +98,20 @@ class Symbol {
 		Rect srcRect = new Rect(mShape * shapeWidth, 0, (mShape + 1) * shapeWidth, shapeHeight);
 		
 		// Create the draw operation
-		DrawOperation drawOp = new DrawOperation(R.drawable.symbols, srcRect, mBounds);
+		DrawOperation drawOp = new DrawOperation(R.drawable.symbols, srcRect, mLocation.getBounds());
 		drawOp.colour = COLOURS[mColour];
-		drawOp.z = mZ;
+		drawOp.z = mLocation.z;
 		
 		// Add to the batch
 		g.gl2d.addToBatch(drawOp);
 	}
 	
-	public RectF getBounds() {
-		return mBounds;
+	public Location getLocation() {
+		return mLocation;
 	}
 	
-	public void setBounds(RectF value) {
-		mBounds = value;
-	}
-	
-	public void setZ(int value) {
-		mZ = value;
+	public void setLocation(Location value) {
+		mLocation = value;
 	}
 	
 	public int getColour() {
@@ -130,5 +136,13 @@ class Symbol {
 	
 	public void setState(State value) {
 		mState = value;
+	}
+	
+	public int getRestoreLocationTime() {
+		return mRestoreLocationTime;
+	}
+
+	public void setRestoreLocationTime(int value) {
+		mRestoreLocationTime = value;
 	}
 }
