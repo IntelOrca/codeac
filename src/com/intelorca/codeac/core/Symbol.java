@@ -7,6 +7,7 @@ import android.graphics.Rect;
 
 import com.intelorca.codeac.R;
 import com.intelorca.slickgl.GameGraphics;
+import com.intelorca.slickgl.GameGraphics2D.BLENDING_MODE;
 import com.intelorca.slickgl.GameGraphics2D.DrawOperation;
 
 class Symbol {
@@ -99,6 +100,7 @@ class Symbol {
 		
 		// Create the draw operation
 		DrawOperation drawOp = new DrawOperation(R.drawable.symbols, srcRect, mLocation.getBounds());
+		drawOp.blendingMode = BLENDING_MODE.ALPHA;
 		drawOp.colour = COLOURS[mColour];
 		drawOp.z = mLocation.z;
 		

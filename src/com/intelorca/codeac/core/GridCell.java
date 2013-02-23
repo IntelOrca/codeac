@@ -2,6 +2,7 @@ package com.intelorca.codeac.core;
 
 import android.graphics.Color;
 
+import com.intelorca.codeac.core.Symbol.State;
 import com.intelorca.slickgl.GameGraphics;
 import com.intelorca.slickgl.GameGraphics2D.DrawOperation;
 
@@ -38,9 +39,14 @@ class GridCell {
 			setSymbolLocation();
 	}
 	
+	public Symbol getSymbol() {
+		return mSymbol;
+	}
+	
 	public void setSymbol(Symbol value) {
 		mCompleted = true;
 		mSymbol = value;
+		mSymbol.setState(State.PLACED);
 		
 		setSymbolLocation();
 	}

@@ -20,7 +20,7 @@ class SymbolRepository {
 	
 	private Symbol getNewSymbol(int c) {
 		Symbol symbol = new Symbol();
-		symbol.setRandom(2, 1);
+		symbol.setRandom(Symbol.COLOURS.length, 1);
 		symbol.setState(State.NORMAL);
 		
 		// Set symbol bounds
@@ -97,8 +97,10 @@ class SymbolRepository {
 			}
 			
 			// Calculate the distance that should be travelled in this tick
-			int timeRemaining = (60 / 2) - symbol.getRestoreLocationTime();
+			int timeRemaining = (60 / 4) - symbol.getRestoreLocationTime();
 			float speed = dc / timeRemaining; 
+			if (speed < 8.0f)
+				speed = 8.0f;
 			
 			// Translate by that distance in a direct direction
 			double angle = Math.atan2(dy, dx);
@@ -111,6 +113,11 @@ class SymbolRepository {
 	public void update() {
 		if (mLocation == null)
 			return;
+		
+		for (int i = 0; i < mMaxSymbols; i++)
+			if (mSymbols[i] != null)
+				if (mSymbols[i].getState() == State.PLACED || mSymbols[i].getState() == State.DESTROYING)
+					mSymbols[i] = null;
 		
 		updateSymbolPhysics();
 		

@@ -10,10 +10,11 @@ import com.intelorca.codeac.R;
 import com.intelorca.codeac.host.MainActivity;
 import com.intelorca.slickgl.Game;
 import com.intelorca.slickgl.GameGraphics;
+import com.intelorca.slickgl.GameGraphics2D.BLENDING_MODE;
 import com.intelorca.slickgl.GameGraphics2D.DrawOperation;
 
 public class CodeACGame extends Game {
-	private enum State {
+	public enum State {
 		Normal,
 		PlacingSymbol,
 	}
@@ -102,6 +103,7 @@ public class CodeACGame extends Game {
 		
 		/*
 		DrawOperation dop = new DrawOperation(R.drawable.symbols, new Rect(0, 0, 128, 128), new RectF(0, 0, 128, 128));
+		dop.blendingMode = BLENDING_MODE.ALPHA;
 		dop.colour = Color.RED;
 		dop.centreX += 20;
 		dop.z = 10;
@@ -162,6 +164,12 @@ public class CodeACGame extends Game {
 		x = event.getX();
 		y = event.getY();
 		
+		if (mGrid.getLocation().getBounds().contains(x, y)) {
+			mGrid.onTouchEvent(event);
+		} else {
+			mGrid.highlightCell(-1, -1);
+		}
+		
 		switch (mState) {
 		case Normal:
 			if (mSymbolRepository.getLocation().getBounds().contains(x, y))
@@ -187,6 +195,16 @@ public class CodeACGame extends Game {
 		mGrabSymbol = symbol;
 		mGrabSymbol.grab(x, y);
 		mState = State.PlacingSymbol;
+	}
+	
+	public void ungrabSymbol() {
+		mGrabSymbol = null;
+		mState = State.Normal;
+	}
+	
+	public Symbol getGrabSymbol() {
+		Symbol symbol = mGrabSymbol;
+		return symbol;
 	}
 	
 	public float getDensity() {

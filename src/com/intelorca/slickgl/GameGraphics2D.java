@@ -37,36 +37,24 @@ public class GameGraphics2D {
 	/**************************************************************************
 	 * Sprite batching
 	 **************************************************************************/
-	private ArrayList<TextureBatch> mTextureBatches = new ArrayList<TextureBatch>();
+	private final DrawOperationPassOrganiser drawOperationPassOrganiser = new DrawOperationPassOrganiser();
 	
 	public void beginSpriteBatch() {
-		mTextureBatches.clear();
+		drawOperationPassOrganiser.reset();
 	}
 	
 	public void addToBatch(DrawOperation drawOp) {
-		// Add to existing texture batch
-		for (TextureBatch texBatch : mTextureBatches) {
-			if (texBatch.mBitmapID == drawOp.bitmapID &&
-					texBatch.mColour == drawOp.colour &&
-					texBatch.mBlendingMode == drawOp.blendingMode) {
-				texBatch.addDrawOperation(drawOp);
-				return;
-			}
-		}
-		
-		// Add a new texture batch
-		TextureBatch texBatch = new TextureBatch(drawOp.bitmapID, drawOp.colour, drawOp.blendingMode);
-		texBatch.addDrawOperation(drawOp);
-		mTextureBatches.add(texBatch);
+		drawOperationPassOrganiser.addDrawOperation(drawOp);
 	}
 	
 	public void endSpriteBatch() {
 		// Draw each texture batch
-		for (TextureBatch texBatch : mTextureBatches)
+		for (TextureBatch texBatch : drawOperationPassOrganiser.getPasses())
 			texBatch.draw();
 	}
 	
 	public enum BLENDING_MODE {
+		NONE,
 		ALPHA,
 		ADDITIVE,
 	}
@@ -159,12 +147,110 @@ public class GameGraphics2D {
 			gl.glDrawElements(GL10.GL_TRIANGLES, indices.length,
 					GL10.GL_UNSIGNED_SHORT, GameGraphics.getShortBuffer(indices));
 		}
+		
+		public boolean checkCompatibility(DrawOperation drawOp) {
+			if (mBitmapID == drawOp.bitmapID &&
+					mColour == drawOp.colour &&
+					mBlendingMode == drawOp.blendingMode)
+				return true;
+			return false;
+		}
 	}
 	
-	public static class DrawOperation {
+	private class DrawOperationPassOrganiser {
+		private ArrayList<DrawOperation> mDrawOperations = new ArrayList<DrawOperation>();
+		
+		public DrawOperationPassOrganiser() {
+		}
+		
+		public void addDrawOperation(DrawOperation drawOp) {
+			mDrawOperations.add((DrawOperation)drawOp.clone());
+		}
+		
+		public void reset() {
+			mDrawOperations.clear();
+		}
+		
+		public TextureBatch[] getPasses() {
+			ArrayList<TextureBatch> textureBatches = new ArrayList<TextureBatch>();
+			
+			// Sort by Z buffer
+			Collections.sort(mDrawOperations, new Comparator<DrawOperation>() {
+				@Override
+				public int compare(DrawOperation a, DrawOperation b) {
+					if (a.z > b.z)
+						return -1;
+					else if (a.z < b.z)
+						return 1;
+					else
+						return 0;
+				}
+			});
+			
+			// Split up into passes on a change of blending mode
+			ArrayList<DrawOperation> currentPass = new ArrayList<DrawOperation>();
+			for (DrawOperation drawOp : mDrawOperations) {
+				if (currentPass.size() > 0) {
+					// Get the last draw operation
+					DrawOperation last = currentPass.get(currentPass.size() - 1);
+					
+					// Check various constraints which will need a separate pass
+					boolean newPassNeeded = false;
+					if (drawOp.blendingMode != last.blendingMode) {
+						newPassNeeded = true;
+					} else if (drawOp.blendingMode != BLENDING_MODE.NONE && drawOp.requiresDifferentBatch(last)) {
+						newPassNeeded = true;
+					}
+					
+					// Process a new pass if needed
+					if (newPassNeeded) {
+						processPassIntoBatch(textureBatches, currentPass);
+						currentPass.clear();
+					}
+				}
+				
+				currentPass.add(drawOp);
+			}
+			
+			// Add last pass
+			if (currentPass.size() > 0)
+				processPassIntoBatch(textureBatches, currentPass);
+			
+			// Convert list to array
+			TextureBatch[] textureBatchesArray = new TextureBatch[textureBatches.size()];
+			textureBatches.toArray(textureBatchesArray);
+			
+			return textureBatchesArray;
+		}
+		
+		private void processPassIntoBatch(List<TextureBatch> textureBatches, List<DrawOperation> drawOps) {
+			// Sort draw operations into texture batches (Z buffering)
+			for (DrawOperation drawOp : drawOps) {
+				boolean handled = false;
+				
+				// Add to existing texture batch
+				for (TextureBatch texBatch : textureBatches) {
+					if (texBatch.checkCompatibility(drawOp)) {
+						texBatch.addDrawOperation(drawOp);
+						handled = true;
+						break;
+					}
+				}
+				
+				if (!handled) {
+					// Add a new texture batch
+					TextureBatch texBatch = new TextureBatch(drawOp.bitmapID, drawOp.colour, drawOp.blendingMode);
+					texBatch.addDrawOperation(drawOp);
+					textureBatches.add(texBatch);
+				}
+			}
+		}
+	}
+	
+	public static class DrawOperation implements Cloneable {
 		public int bitmapID;
 		public int colour = Color.WHITE;
-		public BLENDING_MODE blendingMode = BLENDING_MODE.ALPHA;
+		public BLENDING_MODE blendingMode = BLENDING_MODE.NONE;
 		public Rect src;
 		public float centreX, centreY, z;
 		public float width, height;
@@ -237,6 +323,33 @@ public class GameGraphics2D {
 			indices[4] = 2;
 			indices[5] = 3;
 			return indices;
+		}
+		
+		public boolean requiresDifferentBatch(DrawOperation other) {
+			if (bitmapID != other.bitmapID)
+				return true;
+			if (colour != other.colour)
+				return true;
+			if (blendingMode != other.blendingMode)
+				return true;
+			return false;
+		}
+		
+		public Object clone() {
+			DrawOperation newDrawOp = new DrawOperation();
+			
+			newDrawOp.bitmapID = bitmapID;
+			newDrawOp.colour = colour;
+			newDrawOp.blendingMode = blendingMode;
+			newDrawOp.src = src;
+			newDrawOp.centreX = centreX;
+			newDrawOp.centreY = centreY;
+			newDrawOp.z = z;
+			newDrawOp.width = width;
+			newDrawOp.height = height;
+			newDrawOp.angle = angle;
+			
+			return newDrawOp;
 		}
 	}
 	
