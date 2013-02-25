@@ -57,15 +57,8 @@ public class GameRenderer implements Renderer {
 		// rendering.
 		mGL.glEnableClientState(GL10.GL_VERTEX_ARRAY);
 		
-		// Telling OpenGL to enable textures.
-		// mGL.glEnable(GL10.GL_TEXTURE_2D);
-		
 		// Tell OpenGL to enable the use of UV coordinates.
 		mGL.glEnableClientState(GL10.GL_TEXTURE_COORD_ARRAY);
-		
-		// Blending on
-		// mGL.glEnable(GL10.GL_BLEND);
-		// mGL.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA);
 	}
 	
 	public void loadTextures(int[] bitmapIDs) {

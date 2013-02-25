@@ -41,6 +41,10 @@ public class Location implements Cloneable {
 		cy += y;
 	}
 	
+	public boolean contains(float x, float y) {
+		return getBounds().contains(x, y);
+	}
+	
 	public RectF getBounds() {
 		return new RectF(cx - (width / 2.0f), cy - (height / 2.0f),
 				cx + (width / 2.0f), cy + (height / 2.0f));

@@ -4,6 +4,7 @@ import java.util.Random;
 
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.RectF;
 
 import com.intelorca.codeac.R;
 import com.intelorca.slickgl.GameGraphics;
@@ -23,6 +24,8 @@ class Symbol {
 		Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.MAGENTA, Color.CYAN, Color.WHITE, Color.LTGRAY
 	};
 	public static final int MAX_SHAPES = 8;
+	public static final int SPECIAL_WILD = -1;
+	public static final int SPECIAL_DESTROY = -2;
 	
 	/** The maximum number of colours for a level. */
 	public static final int[] LEVEL_MAX_COLOURS = new int[] {
@@ -34,7 +37,9 @@ class Symbol {
 		3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 8, 8, 8, 8
 	};
 	
-	private static final Random mRandom = new Random();
+	private static final Random gRandom = new Random();
+	
+	private final Symbolica mGame;
 	private Location mLocation;
 	private int mColour;
 	private int mShape;
@@ -43,10 +48,12 @@ class Symbol {
 	private float mGrabDX, mGrabDY;
 	private int mRestoreLocationTime;
 	
-	public Symbol() {
+	public Symbol(Symbolica game) {
+		mGame = game;
 	}
 	
-	public Symbol(int difficulty, int level) {
+	public Symbol(Symbolica game, int difficulty, int level) {
+		mGame = game;
 		int maxColour, maxShape;
 		
 		level += difficulty;
@@ -57,8 +64,8 @@ class Symbol {
 	}
 	
 	public void setRandom(int maxColour, int maxShape) {
-		mColour = mRandom.nextInt(maxColour);
-		mShape =  mRandom.nextInt(maxShape);
+		mColour = gRandom.nextInt(maxColour);
+		mShape =  gRandom.nextInt(maxShape);
 	}
 	
 	public void translate(float x, float y) {
@@ -91,21 +98,65 @@ class Symbol {
 	}
 	
 	public void draw(GameGraphics g) {
-		float density = CodeACGame.Instance.getDensity();
-		
+		if ((mState == State.GRABBED || mState == State.RESTORING_LOCATION) && !isSpecial())
+			drawGlow(g);
+
 		// Calculate source rectangle
-		int shapeWidth = (int)(128.0f * density);
-		int shapeHeight = (int)(128.0f * density);
+		int shapeWidth = (int)(128.0f * mGame.getDensity());
+		int shapeHeight = (int)(128.0f * mGame.getDensity());
 		Rect srcRect = new Rect(mShape * shapeWidth, 0, (mShape + 1) * shapeWidth, shapeHeight);
 		
 		// Create the draw operation
 		DrawOperation drawOp = new DrawOperation(R.drawable.symbols, srcRect, mLocation.getBounds());
 		drawOp.blendingMode = BLENDING_MODE.ALPHA;
-		drawOp.colour = COLOURS[mColour];
 		drawOp.z = mLocation.z;
+		
+		if (mShape == SPECIAL_WILD) {
+			drawOp.bitmapID = 0;
+			drawOp.colour = Color.DKGRAY;
+		} else {
+			drawOp.colour = COLOURS[mColour];
+		}
 		
 		// Add to the batch
 		g.gl2d.addToBatch(drawOp);
+	}
+	
+	private void drawGlow(GameGraphics g) {
+		// Calculate source rectangle
+		int srcWidth = (int)(256.0f * mGame.getDensity());
+		int srcHeight = (int)(256.0f * mGame.getDensity());
+		Rect srcRect = new Rect(0, 0, srcWidth, srcHeight);
+		
+		// Create the draw operation
+		RectF bounds = new RectF(mLocation.getBounds());
+		bounds.inset(mLocation.width / -4.0f, mLocation.height / -4.0f);
+		
+		DrawOperation drawOp = new DrawOperation(R.drawable.star, srcRect, bounds);
+		drawOp.blendingMode = BLENDING_MODE.ADDITIVE;
+		drawOp.z = mLocation.z + 0.1f;
+		drawOp.colour = COLOURS[mColour];
+		
+		// Add to the batch
+		g.gl2d.addToBatch(drawOp);
+	}
+	
+	public boolean canBeTogether(Symbol s) {
+		if (s == null)
+			return true;
+		
+		if (isSpecial() || s.isSpecial()) {
+			return true;
+		} else {
+			if (mShape == s.getShape() || mColour == s.getColour())
+				return true;
+			else
+				return false;
+		}
+	}
+	
+	public boolean isSpecial() {
+		return mShape < 0;
 	}
 	
 	public Location getLocation() {

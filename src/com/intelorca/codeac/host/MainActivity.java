@@ -1,6 +1,6 @@
 package com.intelorca.codeac.host;
 
-import com.intelorca.codeac.core.CodeACGame;
+import com.intelorca.codeac.core.Symbolica;
 import com.intelorca.slickgl.GameView;
 
 import android.app.Activity;
@@ -8,7 +8,7 @@ import android.os.Bundle;
 import android.view.WindowManager;
 
 public class MainActivity extends Activity {
-	private CodeACGame mGame;
+	private Symbolica mGame;
 	private GameView mGameView;
 	
 	public MainActivity() {
@@ -22,7 +22,7 @@ public class MainActivity extends Activity {
 		mGameView = new GameView(this);
 		setContentView(mGameView);
 		
-		mGame = new CodeACGame(this);
+		mGame = new Symbolica(this);
 		mGameView.setGame(mGame);
 		
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);

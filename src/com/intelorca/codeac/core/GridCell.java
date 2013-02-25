@@ -44,11 +44,15 @@ class GridCell {
 	}
 	
 	public void setSymbol(Symbol value) {
-		mCompleted = true;
-		mSymbol = value;
-		mSymbol.setState(State.PLACED);
-		
-		setSymbolLocation();
+		if (value == null) {
+			mSymbol = null;
+		} else {		
+			mCompleted = true;
+			mSymbol = value;
+			mSymbol.setState(State.PLACED);
+			
+			setSymbolLocation();
+		}
 	}
 	
 	private void setSymbolLocation() {

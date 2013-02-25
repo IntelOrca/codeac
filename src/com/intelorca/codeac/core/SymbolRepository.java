@@ -1,5 +1,7 @@
 package com.intelorca.codeac.core;
 
+import java.util.Random;
+
 import android.graphics.Color;
 import android.view.MotionEvent;
 
@@ -8,19 +10,26 @@ import com.intelorca.slickgl.GameGraphics;
 import com.intelorca.slickgl.GameGraphics2D.DrawOperation;
 
 class SymbolRepository {
+	private static final Random gRandom = new Random();
+	
+	private Symbolica mGame;
 	private Location mLocation;
 	private float mSymbolWidth, mSymbolHeight;
 	private int mMaxSymbols;
 	private Symbol[] mSymbols;
 	
-	public SymbolRepository(int maxSymbols) {
+	public SymbolRepository(Symbolica game, int maxSymbols) {
+		mGame = game;
 		mMaxSymbols = maxSymbols;
 		mSymbols = new Symbol[mMaxSymbols];
 	}
 	
 	private Symbol getNewSymbol(int c) {
-		Symbol symbol = new Symbol();
-		symbol.setRandom(Symbol.COLOURS.length, 1);
+		Symbol symbol = new Symbol(mGame);
+		if (gRandom.nextFloat() < 0.04f)
+			symbol.setShape(Symbol.SPECIAL_WILD);
+		else
+			symbol.setRandom(4, 4);
 		symbol.setState(State.NORMAL);
 		
 		// Set symbol bounds
@@ -60,8 +69,9 @@ class SymbolRepository {
 			if (mSymbols[i] == null)
 				continue;
 			
-			if (mSymbols[i].getState() == State.NORMAL || mSymbols[i].getState() == State.RESTORING_LOCATION)
+			if (mSymbols[i].getState() == State.NORMAL || mSymbols[i].getState() == State.RESTORING_LOCATION) {
 				moveSymbolToTarget(mSymbols[i], getCellX(i), getCellY(i));
+			}
 		}
 	}
 	
@@ -167,18 +177,26 @@ class SymbolRepository {
 		return mMaxSymbols;
 	}
 	
+	private Symbol getSymbol(float x, float y) {
+		for (Symbol s : mSymbols)
+			if (s != null)
+				if (s.getLocation().getBounds().contains(x, y))
+					return s;
+		return null;
+	}
+	
 	public void onTouchEvent(MotionEvent event) {
-		float x, y;
+		if (mGame.getStateManager().getState() != GameStateManager.State.IDLE)
+			return;
 		
-		x = event.getX();
-		y = event.getY();
-		
-		for (Symbol symbol : mSymbols) {
-			if (symbol == null)
-				continue;
-			if (symbol.getState() == State.NORMAL && symbol.getLocation().getBounds().contains(x, y)) {
-				CodeACGame.Instance.grabSymbol(symbol, x, y);
-				break;
+		// Check if the repository has just been touched
+		if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+			// Get the symbol under the touched location
+			Symbol s = getSymbol(event.getX(), event.getY());
+			if (s != null) {
+				// Check if the symbol is ready to be picked up
+				if (s.getState() == State.NORMAL)
+					mGame.getSymbolController().pickup(s, event.getX(), event.getY());
 			}
 		}
 	}

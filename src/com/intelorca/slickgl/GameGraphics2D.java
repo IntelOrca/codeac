@@ -1,6 +1,8 @@
 package com.intelorca.slickgl;
 
 import android.graphics.*;
+import android.util.Log;
+
 import java.util.*;
 import javax.microedition.khronos.opengles.*;
 
@@ -224,12 +226,15 @@ public class GameGraphics2D {
 		}
 		
 		private void processPassIntoBatch(List<TextureBatch> textureBatches, List<DrawOperation> drawOps) {
+			int fromIndex = textureBatches.size();
+			
 			// Sort draw operations into texture batches (Z buffering)
 			for (DrawOperation drawOp : drawOps) {
 				boolean handled = false;
 				
 				// Add to existing texture batch
-				for (TextureBatch texBatch : textureBatches) {
+				for (int i = fromIndex; i < textureBatches.size(); i++) {
+					TextureBatch texBatch = textureBatches.get(i);
 					if (texBatch.checkCompatibility(drawOp)) {
 						texBatch.addDrawOperation(drawOp);
 						handled = true;
